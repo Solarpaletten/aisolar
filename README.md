@@ -351,3 +351,31 @@ source venv/bin/activate
 
 set -a; source .env; set +a
 python -m bot.bot
+
+ aisolar git:(release-v1.1-voice-module) ✗ git commit -m "🎤 FINAL: Voice Module AI Solar 2.0 Complete - Ready for merge to main" 
+
+[release-v1.1-voice-module 09b38fc] 🎤 FINAL: Voice Module AI Solar 2.0 Complete - Ready for merge to main
+ 19 files changed, 195 insertions(+), 31 deletions(-)
+ delete mode 100644 bot/__pycache__/__init__.cpython-312.pyc
+ delete mode 100644 bot/__pycache__/bot.cpython-312.pyc
+ delete mode 100644 bot/__pycache__/handlers.cpython-312.pyc
+ delete mode 100644 bot/__pycache__/response_parser.cpython-312.pyc
+ create mode 100644 bot/bot.py
+ rename bot/{bot.by => bot.py.original} (100%)
+ delete mode 100644 bot/handlers/__pycache__/base.cpython-312.pyc
+ delete mode 100644 bot/handlers/__pycache__/claude_handler.cpython-312.pyc
+ delete mode 100644 bot/handlers/__pycache__/dashka_handler.cpython-312.pyc
+ delete mode 100644 bot/keyboards/__pycache__/__init__.cpython-312.pyc
+ delete mode 100644 bot/keyboards/__pycache__/main_keyboard.cpython-312.pyc
+➜  aisolar git:(release-v1.1-voice-module) git rebase main
+Current branch release-v1.1-voice-module is up to date.
+➜  aisolar git:(release-v1.1-voice-module) git push origin release-v1.1-voice-module --force-with-lease
+Enumerating objects: 25, done.
+Counting objects: 100% (25/25), done.
+Compressing objects: 100% (15/15), done.
+Writing objects: 100% (15/15), 18.94 KiB | 1021.00 KiB/s, done.
+Total 15 (delta 8), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (8/8), completed with 7 local objects.
+To https://github.com/Solarpaletten/aisolar.git
+   44bef4c..09b38fc  release-v1.1-voice-module -> release-v1.1-voice-module
+➜  aisolar git:(release-v1.1-voice-module) 
