@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Solar 2.0 - Admin Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <style>
+        .status-online { color: #28a745; }
+        .status-offline { color: #dc3545; }
+        .card-provider { 
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .card-provider:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .provider-card-claude { border-left: 4px solid #7c3aed; }
+        .provider-card-deepseek { border-left: 4px solid #059669; }
+        .provider-card-dashka { border-left: 4px solid #dc2626; }
+        
+        .real-time-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .connection-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .connected { background-color: #28a745; }
+        .disconnected { background-color: #dc3545; }
+        
+        .activity-log {
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Real-time connection indicator -->
+    <div class="real-time-indicator">
+        <span class="badge bg-secondary">
+            <span id="connectionStatus" class="connection-status disconnected"></span>
+            <span id="connectionText">Connecting...</span>
+        </span>
+    </div>
+
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-robot me-2"></i>
+                AI Solar 2.0 Admin Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <i class="fas fa-clock me-1"></i>
+                    <span id="lastUpdate">Loading...</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Overview Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-chart-line fa-2x mb-2"></i>
+                        <h4 id="totalRequests">0</h4>
+                        <p class="mb-0">Total Requests</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-coins fa-2x mb-2"></i>
+                        <h4 id="totalTokens">0</h4>
+                        <p class="mb-0">Total Tokens</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <h4 id="errorRate">0%</h4>
+                        <p class="mb-0">Error Rate</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-server fa-2x mb-2"></i>
+                        <h4 id="activeProviders">0</h4>
+                        <p class="mb-0">Active Providers</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Providers Status -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3><i class="fas fa-brain me-2"></i>AI Providers Status</h3>
+            </div>
+            
+            <!-- Claude -->
+            <div class="col-md-4">
+                <div class="card card-provider provider-card-claude">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="card-title mb-0">
+                                🧠 Claude
+                                <span id="claudeStatusIcon" class="ms-2">❓</span>
+                            </h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="testProvider('claude')">
+                                <i class="fas fa-play"></i> Test
+                            </button>
+                        </div>
+                        <p class="text-muted">Architectural Analysis</p>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <strong id="claudeRequests">0</strong>
+                                <br><small>Requests</small>
+                            </div>
+                            <div class="col-4">
+                                <strong id="claudeTokens">0</strong>
+                                <br><small>Tokens</small>
+                            </div>
+                            <div class="col-4">
+                                <strong id="claudeErrors">0</strong>
+                                <br><small>Errors</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DeepSeek -->
+            <div class="col-md-4">
+                <div class="card card-provider provider-card-deepseek">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="card-title mb-0">
+                                🔍 DeepSeek
+                                <span id="deepseekStatusIcon" class="ms-2">❓</span>
+                            </h5>
+                            <button class="btn btn-sm btn-outline-success" onclick="testProvider('deepseek')">
+                                <i class="fas fa-play"></i> Test
+                            </button>
+                        </div>
+                        <p class="text-muted">Programming & Algorithms</p>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <strong id="deepseekRequests">0</strong>
+                                <br><small>Requests</small>
+                            </div>
+                            <div class="col-4">
+                                <strong id="deepseekTokens">0</strong>
+                                <br><small>Tokens</small>
+                            </div>
+                            <div class="col-4">
+                                <strong id="deepseekErrors">0</strong>
+                                <br><small>Errors</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashka -->
+            <div class="col-md-4">
+                <div class="card card-provider provider-card-dashka">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="card-title mb-0">
+                                ⚙️ Dashka
+                                <span id="dashkaStatusIcon" class="ms-2">❓</span>
+                            </h5>
+                            <button class="btn btn-sm btn-outline-danger" onclick="testProvider('dashka')">
+                                <i class="fas fa-play"></i> Test
+                            </button>
+                        </div>
+                        <p class="text-muted">Technical Support</p>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <strong id="dashkaRequests">0</strong>
+                                <br><small>Requests</small>
+                            </div>
+                            <div class="col-4">
+                                <strong id="dashkaTokens">0</strong>
+                                <br><small>Tokens</small>
+                            </div>
+                            <div class="col-4">
+                                <strong id="dashkaErrors">0</strong>
+                                <br><small>Errors</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts and Activity -->
+        <div class="row">
+            <!-- Usage Chart -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>Usage Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="usageChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Info & Activity -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle me-2"></i>System Info</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Cache Size:</strong> <span id="cacheSize">0</span></p>
+                        <p><strong>Uptime:</strong> <span id="uptime">Unknown</span></p>
+                        <p><strong>Last Updated:</strong> <span id="lastUpdateTime">Never</span></p>
+                        
+                        <hr>
+                        
+                        <h6>Activity Log</h6>
+                        <div id="activityLog" class="activity-log bg-dark text-light p-2 rounded">
+                            <div class="text-muted">Connecting to WebSocket...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // WebSocket connection
+        let ws = null;
+        let chart = null;
+        let reconnectInterval = null;
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('usageChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Claude', 'DeepSeek', 'Dashka'],
+                    datasets: [{
+                        label: 'Requests',
+                        data: [0, 0, 0],
+                        backgroundColor: ['#7c3aed', '#059669', '#dc2626'],
+                        borderColor: ['#7c3aed', '#059669', '#dc2626'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Connect to WebSocket
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                console.log('WebSocket connected');
+                updateConnectionStatus(true);
+                addActivityLog('🟢 Connected to real-time updates', 'success');
+                
+                if (reconnectInterval) {
+                    clearInterval(reconnectInterval);
+                    reconnectInterval = null;
+                }
+            };
+            
+            ws.onmessage = function(event) {
+                try {
+                    const message = JSON.parse(event.data);
+                    handleWebSocketMessage(message);
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+            
+            ws.onclose = function() {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus(false);
+                addActivityLog('🔴 Connection lost, attempting to reconnect...', 'error');
+                
+                // Attempt to reconnect
+                if (!reconnectInterval) {
+                    reconnectInterval = setInterval(connectWebSocket, 5000);
+                }
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                addActivityLog('❌ WebSocket error occurred', 'error');
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(message) {
+            if (message.type === 'initial_data' || message.type === 'dashboard_update') {
+                updateDashboard(message.data);
+            } else if (message.type === 'pong') {
+                // Keep alive response
+                console.log('Received pong');
+            }
+        }
+
+        // Update dashboard with new data
+        function updateDashboard(data) {
+            if (data.error) {
+                addActivityLog(`❌ Error: ${data.error}`, 'error');
+                return;
+            }
+
+            // Update overview
+            if (data.overview) {
+                document.getElementById('totalRequests').textContent = data.overview.total_requests;
+                document.getElementById('totalTokens').textContent = data.overview.total_tokens;
+                document.getElementById('errorRate').textContent = data.overview.error_rate + '%';
+                document.getElementById('activeProviders').textContent = data.overview.active_providers;
+            }
+
+            // Update providers
+            if (data.providers) {
+                for (const [name, provider] of Object.entries(data.providers)) {
+                    updateProviderCard(name, provider);
+                }
+                
+                // Update chart
+                if (chart) {
+                    chart.data.datasets[0].data = [
+                        data.providers.claude.requests,
+                        data.providers.deepseek.requests,
+                        data.providers.dashka.requests
+                    ];
+                    chart.update();
+                }
+            }
+
+            // Update system info
+            if (data.system) {
+                document.getElementById('cacheSize').textContent = data.system.cache_size;
+                document.getElementById('uptime').textContent = data.system.uptime;
+            }
+
+            // Update timestamp
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            document.getElementById('lastUpdateTime').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Update provider card
+        function updateProviderCard(name, provider) {
+            document.getElementById(`${name}StatusIcon`).textContent = provider.status_emoji;
+            document.getElementById(`${name}Requests`).textContent = provider.requests;
+            document.getElementById(`${name}Tokens`).textContent = provider.tokens;
+            document.getElementById(`${name}Errors`).textContent = provider.errors;
+        }
+
+        // Update connection status indicator
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            const textElement = document.getElementById('connectionText');
+            
+            if (connected) {
+                statusElement.className = 'connection-status connected';
+                textElement.textContent = 'Connected';
+            } else {
+                statusElement.className = 'connection-status disconnected';
+                textElement.textContent = 'Disconnected';
+            }
+        }
+
+        // Add activity log entry
+        function addActivityLog(message, type = 'info') {
+            const log = document.getElementById('activityLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span class="text-muted">[${timestamp}]</span> ${message}`;
+            
+            log.insertBefore(logEntry, log.firstChild);
+            
+            // Keep only last 20 entries
+            while (log.children.length > 20) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        // Test provider function
+        async function testProvider(providerName) {
+            addActivityLog(`🧪 Testing ${providerName}...`, 'info');
+            
+            try {
+                const response = await fetch(`/api/test-provider/${providerName}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    addActivityLog(`✅ ${providerName} test successful (${result.execution_time}s)`, 'success');
+                } else {
+                    addActivityLog(`❌ ${providerName} test failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addActivityLog(`❌ ${providerName} test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Send periodic ping to keep connection alive
+        function sendPing() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({type: 'ping'}));
+            }
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            connectWebSocket();
+            
+            // Send ping every 30 seconds
+            setInterval(sendPing, 30000);
+            
+            addActivityLog('🚀 AI Solar 2.0 Admin Dashboard initialized', 'info');
+        });
+    </script>
+</body>
+</html>

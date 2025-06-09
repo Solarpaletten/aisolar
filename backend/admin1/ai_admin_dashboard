@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Solar 2.0 - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d3142 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #4f46e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #4f46e5;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4ade80;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1rem;
+            padding: 1rem;
+            height: calc(100vh - 80px);
+        }
+
+        .chat-monitor {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #4f46e5;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 1rem;
+            position: relative;
+            border-left: 4px solid;
+        }
+
+        .message.user {
+            border-left-color: #06b6d4;
+        }
+
+        .message.dashka {
+            border-left-color: #f59e0b;
+        }
+
+        .message.claude {
+            border-left-color: #8b5cf6;
+        }
+
+        .message.deepseek {
+            border-left-color: #10b981;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .message-time {
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        .message-content {
+            line-height: 1.4;
+        }
+
+        .message-meta {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .analytics-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #4f46e5;
+        }
+
+        .ai-status {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .ai-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+        }
+
+        .ai-name {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online {
+            background: #10b981;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+        }
+
+        .routing-log {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            border-left: 3px solid;
+        }
+
+        .log-entry.route {
+            border-left-color: #f59e0b;
+        }
+
+        .log-entry.process {
+            border-left-color: #8b5cf6;
+        }
+
+        .log-entry.response {
+            border-left-color: #10b981;
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+        }
+
+        .code-preview {
+            background: #1e1e2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            overflow-x: auto;
+        }
+
+        .metric-chart {
+            height: 60px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-bar {
+            position: absolute;
+            bottom: 0;
+            background: linear-gradient(to top, #4f46e5, #8b5cf6);
+            border-radius: 2px 2px 0 0;
+            animation: grow 0.5s ease-out;
+        }
+
+        @keyframes grow {
+            from { height: 0; }
+            to { height: var(--height); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            background: rgba(79, 70, 229, 0.2);
+            border: 1px solid #4f46e5;
+            border-radius: 6px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: rgba(79, 70, 229, 0.4);
+        }
+
+        .btn.active {
+            background: #4f46e5;
+        }
+
+        .emoji {
+            font-size: 1.2em;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(79, 70, 229, 0.5);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🤖 AI Solar 2.0 - Admin Dashboard</h1>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalMessages">42</div>
+                <div class="stat-label">Сообщений</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="activeUsers">7</div>
+                <div class="stat-label">Активных</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgResponse">1.2s</div>
+                <div class="stat-label">Среднее время</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="chat-monitor">
+            <div class="chat-header">
+                <h2 class="chat-title">💬 Мониторинг чата в реальном времени</h2>
+                <div class="controls">
+                    <button class="btn active" onclick="toggleFilter('all')">Все</button>
+                    <button class="btn" onclick="toggleFilter('dashka')">Dashka</button>
+                    <button class="btn" onclick="toggleFilter('claude')">Claude</button>
+                    <button class="btn" onclick="toggleFilter('deepseek')">DeepSeek</button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="analytics-panel">
+                <h3 class="panel-title">🤖 Статус AI провайдеров</h3>
+                <div class="ai-status">
+                    <div class="ai-item">
+                        <div class="ai-name">
+                            <span class="status-dot online"></span>
+                            <span class="emoji">🧠</span>
+                            <span>Claude</span>
+                        </div>
+                        <span>Online</span>
+                    </div>
+                    <div class="ai-item">
+                        <div class="ai-name">
+                            <span class="status-dot online"></span>
+                            <span class="emoji">🛠️</span>
+                            <span>Dashka</span>
+                        </div>
+                        <span>Online</span>
+                    </div>
+                    <div class="ai-item">
+                        <div class="ai-name">
+                            <span class="status-dot online"></span>
+                            <span class="emoji">💻</span>
+                            <span>DeepSeek</span>
+                        </div>
+                        <span>Online</span>
+                    </div>
+                </div>
+
+                <h4 style="margin: 1rem 0 0.5rem 0; color: #4f46e5;">📊 Метрики производительности</h4>
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>Claude</span>
+                        <span>87%</span>
+                    </div>
+                    <div class="metric-chart">
+                        <div class="chart-bar" style="--height: 87%; width: 100%;"></div>
+                    </div>
+                </div>
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>DeepSeek</span>
+                        <span>92%</span>
+                    </div>
+                    <div class="metric-chart">
+                        <div class="chart-bar" style="--height: 92%; width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="routing-log">
+                <h3 class="panel-title">🔄 Лог маршрутизации</h3>
+                <div id="routingLog">
+                    <!-- Routing logs will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data - в реальном проекте будет получаться от WebSocket
+        const sampleMessages = [
+            {
+                id: 1,
+                sender: 'user',
+                content: 'Как спроектировать микросервисную архитектуру?',
+                time: '14:32:15',
+                userId: 'user_123'
+            },
+            {
+                id: 2,
+                sender: 'dashka',
+                content: '🎯 Анализирую запрос...\n📋 Тип задачи: architecture\n🧠 Маршрутизирую к Claude',
+                time: '14:32:16',
+                metadata: {
+                    taskType: 'architecture',
+                    selectedProvider: 'claude',
+                    analysisTime: '0.3s'
+                }
+            },
+            {
+                id: 3,
+                sender: 'claude',
+                content: '🏗️ **Микросервисная архитектура - пошаговый план:**\n\n**1. Декомпозиция домена**\n- Выделите бизнес-контексты\n- Определите границы сервисов\n- Проанализируйте связи между доменами\n\n**2. Техническая архитектура**\n- API Gateway для маршрутизации\n- Service Discovery для регистрации\n- Load Balancer для распределения нагрузки',
+                time: '14:32:18',
+                metadata: {
+                    provider: 'claude',
+                    confidence: 0.94,
+                    executionTime: '2.1s',
+                    tokenCount: 1247
+                }
+            },
+            {
+                id: 4,
+                sender: 'user',
+                content: 'Создай функцию для валидации email на Python',
+                time: '14:35:22',
+                userId: 'user_456'
+            },
+            {
+                id: 5,
+                sender: 'dashka',
+                content: '🎯 Анализирую запрос...\n📋 Тип задачи: code_generation\n💻 Маршрутизирую к DeepSeek',
+                time: '14:35:23',
+                metadata: {
+                    taskType: 'code_generation',
+                    selectedProvider: 'deepseek',
+                    analysisTime: '0.2s'
+                }
+            },
+            {
+                id: 6,
+                sender: 'deepseek',
+                content: '💻 **Функция валидации email:**\n\n```python\nimport re\n\ndef validate_email(email: str) -> bool:\n    """\n    Валидация email адреса\n    \n    Args:\n        email (str): Email для проверки\n    \n    Returns:\n        bool: True если email валиден\n    """\n    pattern = r\'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$\'\n    return bool(re.match(pattern, email))\n```',
+                time: '14:35:25',
+                metadata: {
+                    provider: 'deepseek',
+                    confidence: 0.96,
+                    executionTime: '1.8s',
+                    codeLines: 12
+                }
+            }
+        ];
+
+        const routingLogs = [
+            { type: 'route', time: '14:32:16', message: 'Task: architecture → Routing to Claude' },
+            { type: 'process', time: '14:32:17', message: 'Claude processing architectural query...' },
+            { type: 'response', time: '14:32:18', message: 'Claude response ready (2.1s, 94% confidence)' },
+            { type: 'route', time: '14:35:23', message: 'Task: code_generation → Routing to DeepSeek' },
+            { type: 'process', time: '14:35:24', message: 'DeepSeek generating Python code...' },
+            { type: 'response', time: '14:35:25', message: 'DeepSeek response ready (1.8s, 96% confidence)' }
+        ];
+
+        // Populate messages
+        function populateMessages() {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+
+            sampleMessages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.sender}`;
+                
+                let senderEmoji = '';
+                switch(msg.sender) {
+                    case 'user': senderEmoji = '👤'; break;
+                    case 'dashka': senderEmoji = '🛠️'; break;
+                    case 'claude': senderEmoji = '🧠'; break;
+                    case 'deepseek': senderEmoji = '💻'; break;
+                }
+
+                let metaInfo = '';
+                if (msg.metadata) {
+                    const meta = msg.metadata;
+                    metaInfo = `<div class="message-meta">`;
+                    if (meta.taskType) metaInfo += `Task: ${meta.taskType} | `;
+                    if (meta.selectedProvider) metaInfo += `Provider: ${meta.selectedProvider} | `;
+                    if (meta.confidence) metaInfo += `Confidence: ${(meta.confidence * 100).toFixed(0)}% | `;
+                    if (meta.executionTime) metaInfo += `Time: ${meta.executionTime}`;
+                    metaInfo += `</div>`;
+                }
+
+                messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <div class="message-sender">
+                            <span class="emoji">${senderEmoji}</span>
+                            <span>${msg.sender.charAt(0).toUpperCase() + msg.sender.slice(1)}</span>
+                        </div>
+                        <div class="message-time">${msg.time}</div>
+                    </div>
+                    <div class="message-content">${msg.content.replace(/\n/g, '<br>').replace(/```(\w+)?\n([\s\S]*?)```/g, '<div class="code-preview">$2</div>')}</div>
+                    ${metaInfo}
+                `;
+
+                container.appendChild(messageDiv);
+            });
+
+            // Auto scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Populate routing logs
+        function populateRoutingLogs() {
+            const container = document.getElementById('routingLog');
+            container.innerHTML = '';
+
+            routingLogs.forEach(log => {
+                const logDiv = document.createElement('div');
+                logDiv.className = `log-entry ${log.type}`;
+                logDiv.innerHTML = `
+                    <strong>${log.time}</strong><br>
+                    ${log.message}
+                `;
+                container.appendChild(logDiv);
+            });
+        }
+
+        // Filter messages
+        function toggleFilter(type) {
+            // Update button states
+            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Filter messages
+            const messages = document.querySelectorAll('.message');
+            messages.forEach(msg => {
+                if (type === 'all' || msg.classList.contains(type)) {
+                    msg.style.display = 'block';
+                } else {
+                    msg.style.display = 'none';
+                }
+            });
+        }
+
+        // Simulate real-time updates
+        function simulateRealTimeUpdates() {
+            setInterval(() => {
+                // Update stats
+                document.getElementById('totalMessages').textContent = 
+                    parseInt(document.getElementById('totalMessages').textContent) + Math.floor(Math.random() * 3);
+                
+                // Add new routing log occasionally
+                if (Math.random() < 0.3) {
+                    const logTypes = ['route', 'process', 'response'];
+                    const logType = logTypes[Math.floor(Math.random() * logTypes.length)];
+                    const time = new Date().toLocaleTimeString();
+                    
+                    const container = document.getElementById('routingLog');
+                    const logDiv = document.createElement('div');
+                    logDiv.className = `log-entry ${logType}`;
+                    logDiv.innerHTML = `
+                        <strong>${time}</strong><br>
+                        Simulated ${logType} event
+                    `;
+                    container.insertBefore(logDiv, container.firstChild);
+                    
+                    // Keep only last 10 logs
+                    while (container.children.length > 10) {
+                        container.removeChild(container.lastChild);
+                    }
+                }
+            }, 5000);
+        }
+
+        // Initialize
+        populateMessages();
+        populateRoutingLogs();
+        simulateRealTimeUpdates();
+
+        // WebSocket connection (псевдо-код для будущей реализации)
+        function initWebSocket() {
+            // const ws = new WebSocket('ws://localhost:8000/admin-ws');
+            // ws.onmessage = function(event) {
+            //     const data = JSON.parse(event.data);
+            //     updateDashboard(data);
+            // };
+        }
+    </script>
+</body>
+</html>

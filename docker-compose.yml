@@ -1,0 +1,48 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: aisolar
+      POSTGRES_PASSWORD: pass123
+      POSTGRES_DB: aisolar
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aisolar -d aisolar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://aisolar:pass123@postgres:5432/aisolar
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.bot
+    depends_on:
+      - postgres
+      - api
+    environment:
+      DATABASE_URL: postgresql://aisolar:pass123@postgres:5432/aisolar
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}  # ← Исправлено!
+      API_URL: http://api:8000
+    env_file:  # ← Добавлено!
+      - .env
+    restart: unless-stopped
+
+volumes:
+  pg_data:
