@@ -3,10 +3,10 @@ from tempfile import NamedTemporaryFile
 from faster_whisper import WhisperModel
 from aiogram import types
 from gtts import gTTS
-from core.orchestrator import DashkaOrchestrator
+from core.orchestrator import Orchestrator
 
 class VoiceHandler:
-    def __init__(self, orchestrator: DashkaOrchestrator):
+    def __init__(self, orchestrator: Orchestrator):
         self.orchestrator = orchestrator
         self.whisper = WhisperModel("small")  # Модель для распознавания (может быть tiny, base, small)
 

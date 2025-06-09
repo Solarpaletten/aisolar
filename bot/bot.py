@@ -1,0 +1,164 @@
+
+"""
+Главный файл бота AI Solar 2.0 с поддержкой голосовых сообщений
+"""
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import logging
+from dotenv import load_dotenv
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler
+from telegram import Update
+from telegram.ext.filters import VOICE, TEXT
+
+# Загрузка переменных окружения
+load_dotenv()
+
+# Импорт обработчиков
+from handlers.claude import handle_claude, handle_claude_callback
+from handlers.deepseek import handle_deepseek, handle_deepseek_callback 
+from handlers.dashka import handle_dashka, handle_dashka_callback
+from handlers.voice import VoiceHandler
+from core.orchestrator import Orchestrator
+#from core.providers.registry import ProviderRegistry
+
+# Настройка логирования
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+class AISolarBot:
+    """Главный класс бота с голосовой интеграцией"""
+    
+    def __init__(self):
+        self.token = os.getenv("TELEGRAM_BOT_TOKEN")
+        if not self.token:
+            raise ValueError("TELEGRAM_BOT_TOKEN не найден в .env")
+        
+        # Инициализация провайдеров
+#         self.providers = ProviderRegistry().get_all()
+        self.orchestrator = Orchestrator()
+        self.voice_handler = VoiceHandler(self.orchestrator)
+        
+        self.application = ApplicationBuilder().token(self.token).build()
+        self._setup_handlers()
+    
+    def _setup_handlers(self):
+        """Регистрация всех обработчиков"""
+        
+        # Команды AI провайдеров
+        self.application.add_handler(CommandHandler("claude", handle_claude))
+        self.application.add_handler(CommandHandler("deepseek", handle_deepseek))
+        self.application.add_handler(CommandHandler("dashka", handle_dashka))
+        
+        # Callback обработчики
+        self.application.add_handler(CallbackQueryHandler(
+            handle_claude_callback, 
+            pattern="^claude_"
+        ))
+        self.application.add_handler(CallbackQueryHandler(
+            handle_deepseek_callback,
+            pattern="^deepseek_" 
+        ))
+        self.application.add_handler(CallbackQueryHandler(
+            handle_dashka_callback,
+            pattern="^dashka_"
+        ))
+        
+        # Голосовые сообщения
+        self.application.add_handler(MessageHandler(
+            VOICE, 
+            self._handle_voice_message
+        ))
+        
+        # Текстовые сообщения (дефолтный обработчик)
+        self.application.add_handler(MessageHandler(
+            TEXT & (~filters.COMMAND),
+            self._handle_text_message
+        ))
+        
+        # Основные команды
+        self.application.add_handler(CommandHandler("start", self._handle_start))
+        self.application.add_handler(CommandHandler("help", self._handle_help))
+        self.application.add_handler(CommandHandler("status", self._handle_status))
+        
+        logger.info("✅ Все обработчики зарегистрированы")
+    
+    async def _handle_voice_message(self, update: Update, context):
+        """Обработка голосовых сообщений"""
+        try:
+            text_response = await self.voice_handler.handle_voice(update.message)
+            
+            # Отправляем текстовый ответ
+            await update.message.reply_text(text_response)
+            
+            # Голосовой ответ (опционально)
+            voice_path = await self.voice_handler.generate_voice_response(text_response)
+            await update.message.reply_voice(voice=open(voice_path, 'rb'))
+            os.unlink(voice_path)
+            
+        except Exception as e:
+            logger.error(f"Voice processing error: {e}")
+            await update.message.reply_text("⚠️ Ошибка обработки голосового сообщения")
+    
+    async def _handle_text_message(self, update: Update, context):
+        """Обработка текстовых сообщений (дефолтный роутинг)"""
+        response = await self.orchestrator.process(
+            user_id=update.message.from_user.id,
+            query=update.message.text
+        )
+        await update.message.reply_text(response)
+    
+    async def _handle_start(self, update: Update, context):
+        """Обработка команды /start"""
+        welcome_msg = """🎙️ **AI Solar 2.0 теперь с голосовым интерфейсом!**
+
+Просто отправьте голосовое сообщение или текст:
+- 🧠 Claude: архитектурные вопросы
+- 💻 DeepSeek: программирование
+- ⚙️ Dashka: техническая поддержка
+
+Попробуйте сказать: *"Как создать микросервис на Python?"*"""
+        await update.message.reply_markdown(welcome_msg)
+    
+    async def _handle_help(self, update: Update, context):
+        """Обработка команды /help"""
+        help_msg = """🔊 **Голосовые команды:**
+- Архитектура: "Как спроектировать БД?"
+- Код: "Напиши функцию на Python"
+- Поддержка: "Почему не работает API?"
+
+📝 **Текстовые команды:**
+/claude [вопрос] - Архитектура
+/deepseek [задача] - Программирование  
+/dashka [проблема] - Поддержка"""
+        await update.message.reply_markdown(help_msg)
+    
+    async def _handle_status(self, update: Update, context):
+        """Обработка команды /status"""
+        status = {
+            "Claude": "✅ Online",
+            "DeepSeek": "✅ Online", 
+            "Dashka": "✅ Online",
+            "Whisper": "✅ Online (v3-small)",
+            "TTS": "✅ Google TTS"
+        }
+        status_msg = "📊 **Статус системы:**\n" + "\n".join(
+            f"- {k}: {v}" for k,v in status.items()
+        )
+        await update.message.reply_markdown(status_msg)
+    
+    def run(self):
+        """Запуск бота"""
+        logger.info("🚀 Бот запущен с поддержкой голосовых сообщений")
+        self.application.run_polling()
+
+if __name__ == "__main__":
+    try:
+        AISolarBot().run()
+    except Exception as e:
+        logger.critical(f"Бот упал с ошибкой: {e}")

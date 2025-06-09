@@ -16,10 +16,10 @@ from .handlers.claude import handle_claude, handle_claude_callback
 from .handlers.deepseek import handle_deepseek, handle_deepseek_callback
 from .handlers.dashka import handle_dashka, handle_dashka_callback
 from handlers.voice import VoiceHandler
-from core.orchestrator import DashkaOrchestrator
+from core.orchestrator import Orchestrator
 
 # Инициализация
-orchestrator = DashkaOrchestrator(providers)
+orchestrator = Orchestrator(providers)
 voice_handler = VoiceHandler(orchestrator)
 
 # Регистрация обработчика
