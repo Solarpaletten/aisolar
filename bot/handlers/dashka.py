@@ -2,7 +2,9 @@
 """
 Dashka Handler - отвечает ТОЛЬКО за маршрутизацию команд техподдержки
 """
-
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from core.orchestrator import Orchestrator
