@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { Upload, Download, FileAudio, FileVideo, Clock, HardDrive, Loader2, CheckCircle2, XCircle, Play, Trash2, Copy, Sun, Moon, Globe, Zap, Server, Settings, Languages } from 'lucide-react'
-import { validateFile } from '@/lib/validation'
+import { Upload, FileAudio, FileVideo, Clock, HardDrive, Loader2, CheckCircle2, XCircle, Play, Trash2, Copy, Sun, Moon, Globe, Zap, Server, Settings, Languages } from 'lucide-react'
 import { textToSRT } from '@/lib/exportSRT'
 
 interface HistoryItem {
@@ -15,6 +14,7 @@ interface HistoryItem {
 
 const AUDIO_FORMATS = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma'];
 const VIDEO_FORMATS = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'mpeg', 'mpg'];
+
 
 export default function AISolarTranscriber() {
   const [file, setFile] = useState<File | null>(null)
