@@ -1,0 +1,6 @@
+git init
+git add .
+git commit --file cm.txt
+git branch -M main
+git remote set-url origin https://github.com/Solarpaletten/aisolar.git
+git push -u origin main
