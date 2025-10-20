@@ -16,7 +16,13 @@ const MAX_FILE_SIZE_MB = 20
 const CHUNK_DURATION_SEC = 300
 
 function ndjson(out: ReadableStreamDefaultController, obj: any) {
-  out.enqueue(new TextEncoder().encode(JSON.stringify(obj) + '\n'))
+  try {
+    if (out) {
+      out.enqueue(new TextEncoder().encode(JSON.stringify(obj) + '\n'))
+    }
+  } catch (err) {
+    console.warn('Stream closed, skipping enqueue:', err)
+  }
 }
 
 function formatElapsedTime(ms: number): string {
