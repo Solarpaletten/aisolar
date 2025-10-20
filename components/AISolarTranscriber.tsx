@@ -202,10 +202,12 @@ export default function AISolarTranscriber() {
                 setTranscript(data.text)
               }
               else if (data.type === 'final') {
+                console.log('🎯 Получен final:', data.text.substring(0, 100))
                 finalText = data.text
                 setTranscript(data.text)
                 setCurrentChunk(0)
                 setTotalChunks(0)
+                setChunkProgress(0)
               }
               else if (data.type === 'error') {
                 throw new Error(data.message)
@@ -224,6 +226,8 @@ export default function AISolarTranscriber() {
       setProcessingStatus('✅ Готово!');
 
       if (finalText) {
+        console.log('📝 Финальный текст получен:', finalText.substring(0, 100))
+        setTranscript(finalText)
         saveToHistory(file.name, finalText)
       }
     } catch (err) {
@@ -253,27 +257,27 @@ export default function AISolarTranscriber() {
       <div className="max-w-7xl mx-auto p-6 space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className={`text - 4xl font - bold ${darkMode ? 'text-white' : 'text-gray-900'} flex items - center gap - 3`}>
+            <h1 className={`text-4xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} flex items-center gap-3`}>
               <span className="text-5xl">🌞</span>
               AISOLAR
-              <span className={`text - sm px - 3 py - 1 rounded - full ${darkMode ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'} `}>
+              <span className={`text-sm px-3 py-1 rounded-full ${darkMode ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'} `}>
                 v2.0
               </span>
             </h1>
-            <p className={`mt - 2 ${darkMode ? 'text-purple-300' : 'text-purple-600'} `}>
+            <p className={`mt-2 ${darkMode ? 'text-purple-300' : 'text-purple-600'} `}>
               AI-транскрибация видео в текст
             </p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className={`p - 3 rounded - xl transition - all ${darkMode ? 'bg-white/10 hover:bg-white/20 text-purple-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} `}
+              className={`p-3 rounded-xl transition-all ${darkMode ? 'bg-white/10 hover:bg-white/20 text-purple-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} `}
             >
               <Settings size={24} />
             </button>
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className={`p - 3 rounded - xl transition - all ${darkMode ? 'bg-white/10 hover:bg-white/20 text-yellow-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} `}
+              className={`p-3 rounded-xl transition-all ${darkMode ? 'bg-white/10 hover:bg-white/20 text-yellow-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} `}
             >
               {darkMode ? <Sun size={24} /> : <Moon size={24} />}
             </button>
@@ -281,20 +285,20 @@ export default function AISolarTranscriber() {
         </div>
 
         {showSettings && (
-          <div className={`rounded - 2xl p - 6 ${darkMode ? 'bg-white/5 border border-white/10' : 'bg-white shadow-lg'} `}>
-            <h3 className={`text - lg font - semibold mb - 4 ${darkMode ? 'text-white' : 'text-gray-900'} `}>
+          <div className={`rounded-2xl p-6 ${darkMode ? 'bg-white/5 border border-white/10' : 'bg-white shadow-lg'} `}>
+            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'} `}>
               Настройки транскрибации
             </h3>
 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className={`block text - sm font - medium mb - 2 ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
                   Движок
                 </label>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setEngine('openai')}
-                    className={`flex - 1 p - 3 rounded - xl transition - all ${engine === 'openai'
+                    className={`flex-1 p-3 rounded-xl transition-all ${engine === 'openai'
                       ? darkMode ? 'bg-purple-500 text-white' : 'bg-purple-600 text-white'
                       : darkMode ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                       } `}
@@ -304,7 +308,7 @@ export default function AISolarTranscriber() {
                   </button>
                   <button
                     onClick={() => setEngine('local')}
-                    className={`flex - 1 p - 3 rounded - xl transition - all ${engine === 'local'
+                    className={`flex-1 p-3 rounded-xl transition-all ${engine === 'local'
                       ? darkMode ? 'bg-purple-500 text-white' : 'bg-purple-600 text-white'
                       : darkMode ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                       } `}
@@ -316,14 +320,14 @@ export default function AISolarTranscriber() {
               </div>
 
               <div>
-                <label className={`block text - sm font - medium mb - 2 ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
                   <Globe className="inline mr-1" size={16} />
                   Язык
                 </label>
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className={`w - full p - 3 rounded - xl ${darkMode ? 'bg-white/5 text-white' : 'bg-gray-100 text-gray-900'} outline - none`}
+                  className={`w-full p-3 rounded-xl ${darkMode ? 'bg-white/5 text-white' : 'bg-gray-100 text-gray-900'} outline-none`}
                 >
                   <option value="auto">Авто</option>
                   <option value="ru">Русский</option>
@@ -341,7 +345,7 @@ export default function AISolarTranscriber() {
                     onChange={(e) => setAutoTranslate(e.target.checked)}
                     className="w-5 h-5 rounded accent-purple-500"
                   />
-                  <span className={`text - sm font - medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
+                  <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
                     <Languages className="inline mr-1" size={16} />
                     Перевод
                   </span>
@@ -350,7 +354,7 @@ export default function AISolarTranscriber() {
                   <select
                     value={targetLanguage}
                     onChange={(e) => setTargetLanguage(e.target.value)}
-                    className={`w - full mt - 2 p - 2 rounded - lg ${darkMode ? 'bg-white/5 text-white' : 'bg-gray-100 text-gray-900'} outline - none text - sm`}
+                    className={`w-full mt-2 p-2 rounded-lg ${darkMode ? 'bg-white/5 text-white' : 'bg-gray-100 text-gray-900'} outline-none text-sm`}
                   >
                     <option value="ru">→ Русский</option>
                     <option value="en">→ English</option>
@@ -367,7 +371,7 @@ export default function AISolarTranscriber() {
                     onChange={(e) => setEnableSegmentation(e.target.checked)}
                     className="w-5 h-5 rounded accent-purple-500"
                   />
-                  <span className={`text - sm font - medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
+                  <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
                     Сегментация
                   </span>
                 </label>
@@ -378,7 +382,7 @@ export default function AISolarTranscriber() {
                     onChange={(e) => setEnableSpeakers(e.target.checked)}
                     className="w-5 h-5 rounded accent-purple-500"
                   />
-                  <span className={`text - sm font - medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
+                  <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} `}>
                     Спикеры
                   </span>
                 </label>
@@ -398,7 +402,7 @@ export default function AISolarTranscriber() {
                 const f = e.dataTransfer.files[0]
                 if (f) handleFileSelect(f)
               }}
-              className={`relative rounded - 2xl border - 2 border - dashed transition - all p - 12 text - center cursor - pointer ${isDragging
+              className={`relative rounded-2xl border-2 border-dashed transition-all p-12 text-center cursor-pointer ${isDragging
                 ? darkMode ? 'border-purple-400 bg-purple-500/20' : 'border-purple-500 bg-purple-100'
                 : darkMode ? 'border-purple-500/50 bg-white/5' : 'border-gray-300 bg-white'
                 } `}
@@ -416,7 +420,7 @@ export default function AISolarTranscriber() {
               />
 
               <div className="space-y-4">
-                <div className={`mx - auto w - 20 h - 20 rounded - full flex items - center justify - center ${darkMode ? 'bg-purple-500/20' : 'bg-purple-100'} `}>
+                <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center ${darkMode ? 'bg-purple-500/20' : 'bg-purple-100'} `}>
                   {file ? (
                     mediaType === 'audio' ? <FileAudio className={darkMode ? 'text-purple-300' : 'text-purple-600'} size={40} /> : <FileVideo className={darkMode ? 'text-purple-300' : 'text-purple-600'} size={40} />
                   ) : (
@@ -425,10 +429,10 @@ export default function AISolarTranscriber() {
                 </div>
 
                 <div>
-                  <p className={`text - xl font - semibold ${darkMode ? 'text-white' : 'text-gray-900'} `}>
+                  <p className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} `}>
                     {file ? file.name : 'Перетащите видео или аудио'}
                   </p>
-                  <p className={`mt - 2 text - sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} `}>
+                  <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} `}>
                     AVI, MP4, MOV, MP3, WAV, OGG • До 500MB
                   </p>
                 </div>
@@ -437,9 +441,9 @@ export default function AISolarTranscriber() {
 
             {/* БЛОК С ИНФОРМАЦИЕЙ О ФАЙЛЕ */}
             {file && (
-              <div className={`mb - 4 space - y - 2 rounded - xl p - 4 ${darkMode ? 'bg-white/5' : 'bg-gray-50'} `}>
+              <div className={`mb-4 space-y - 2 rounded-xl p-4 ${darkMode ? 'bg-white/5' : 'bg-gray-50'} `}>
                 {/* Тип файла и основная информация */}
-                <div className={`flex items - center gap - 4 text - sm ${darkMode ? 'text-purple-200/80' : 'text-gray-600'} `}>
+                <div className={`flex items-center gap-4 text-sm ${darkMode ? 'text-purple-200/80' : 'text-gray-600'} `}>
                   <div className="flex items-center gap-1.5">
                     {mediaType === 'audio' ? (
                       <FileAudio className="w-4 h-4" />
@@ -464,7 +468,7 @@ export default function AISolarTranscriber() {
 
                 {/* Статус обработки */}
                 {processingStatus && (
-                  <div className={`flex items - center gap - 2 text - sm rounded - lg px - 3 py - 2 ${darkMode ? 'bg-purple-500/20 border border-purple-400/30 text-purple-200' : 'bg-purple-100 border border-purple-300 text-purple-700'} `}>
+                  <div className={`flex items-center gap-2 text-sm rounded-lg px-3 py-2 ${darkMode ? 'bg-purple-500/20 border border-purple-400/30 text-purple-200' : 'bg-purple-100 border border-purple-300 text-purple-700'} `}>
                     <span>{processingStatus}</span>
                     {loading && mediaDuration && (
                       <span className={darkMode ? 'text-purple-200/60' : 'text-purple-600/60'}>
@@ -538,7 +542,7 @@ export default function AISolarTranscriber() {
                 <button
                   onClick={startTranscription}
                   disabled={loading}
-                  className={`flex - 1 px - 6 py - 4 rounded - xl font - semibold transition - all ${loading
+                  className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${loading
                     ? 'bg-gray-600 cursor-not-allowed'
                     : darkMode ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
                     } `}
@@ -557,7 +561,7 @@ export default function AISolarTranscriber() {
                     setProcessingStatus('')
                   }}
                   disabled={loading}
-                  className={`px - 6 py - 4 rounded - xl font - semibold ${darkMode ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'} `}
+                  className={`px-6 py-4 rounded-xl font-semibold ${darkMode ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'} `}
                 >
                   <Trash2 className="inline mr-2" size={20} />
                   Очистить
@@ -566,7 +570,7 @@ export default function AISolarTranscriber() {
             )}
 
             {progress && (
-              <div className={`rounded - xl p - 4 ${darkMode ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-blue-50'} `}>
+              <div className={`rounded-xl p-4 ${darkMode ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-blue-50'} `}>
                 <div className="flex items-center gap-3">
                   {loading && <Loader2 className="animate-spin" size={20} />}
                   {success && <CheckCircle2 className="text-green-500" size={20} />}
@@ -576,7 +580,7 @@ export default function AISolarTranscriber() {
             )}
 
             {error && (
-              <div className={`rounded - xl p - 4 ${darkMode ? 'bg-red-500/20' : 'bg-red-50'} `}>
+              <div className={`rounded-xl p-4 ${darkMode ? 'bg-red-500/20' : 'bg-red-50'} `}>
                 <div className="flex items-center gap-3">
                   <XCircle className="text-red-500" size={20} />
                   <p>{error}</p>
@@ -585,9 +589,9 @@ export default function AISolarTranscriber() {
             )}
 
             {transcript && (
-              <div className={`rounded - 2xl overflow - hidden ${darkMode ? 'bg-white/5' : 'bg-white shadow-lg'} `}>
-                <div className={`p - 4 flex justify - between ${darkMode ? 'bg-white/10' : 'bg-gray-100'} `}>
-                  <h3 className={`font - semibold ${darkMode ? 'text-white' : 'text-gray-900'} `}>Результат</h3>
+              <div className={`rounded-2xl overflow-hidden ${darkMode ? 'bg-white/5' : 'bg-white shadow-lg'} `}>
+                <div className={`p-4 flex justify-between ${darkMode ? 'bg-white/10' : 'bg-gray-100'} `}>
+                  <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} `}>Результат</h3>
                   <div className="flex gap-2">
                     <button onClick={() => navigator.clipboard.writeText(transcript)} className="p-2 rounded-lg hover:bg-white/10">
                       <Copy size={18} />
@@ -600,17 +604,17 @@ export default function AISolarTranscriber() {
                 <textarea
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
-                  className={`w - full h - 96 p - 6 resize - none outline - none ${darkMode ? 'bg-slate-900/50 text-gray-100' : 'bg-white text-gray-900'} `}
+                  className={`w-full h-96 p-6 resize-none outline-none ${darkMode ? 'bg-slate-900/50 text-gray-100' : 'bg-white text-gray-900'} `}
                 />
               </div>
             )}
           </div>
 
           <div>
-            <div className={`rounded - 2xl p - 6 ${darkMode ? 'bg-white/5' : 'bg-white shadow-lg'} `}>
-              <h3 className={`text - lg font - semibold mb - 4 ${darkMode ? 'text-white' : 'text-gray-900'} `}>История</h3>
+            <div className={`rounded-2xl p-6 ${darkMode ? 'bg-white/5' : 'bg-white shadow-lg'} `}>
+              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'} `}>История</h3>
               {history.length === 0 ? (
-                <p className={`text - sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} `}>Пусто</p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} `}>Пусто</p>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {history.map((item) => (
@@ -620,10 +624,10 @@ export default function AISolarTranscriber() {
                         setTranscript(item.text)
                         setSuccess(true)
                       }}
-                      className={`p - 3 rounded - xl cursor - pointer ${darkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-50 hover:bg-gray-100'} `}
+                      className={`p-3 rounded-xl cursor-pointer ${darkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-50 hover:bg-gray-100'} `}
                     >
-                      <p className={`text - sm font - medium truncate ${darkMode ? 'text-white' : 'text-gray-900'} `}>{item.name}</p>
-                      <p className={`text - xs mt - 1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} `}>
+                      <p className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-gray-900'} `}>{item.name}</p>
+                      <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} `}>
                         {new Date(item.date).toLocaleDateString('ru-RU')}
                       </p>
                     </div>
