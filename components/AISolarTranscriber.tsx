@@ -201,14 +201,20 @@ export default function AISolarTranscriber() {
               else if (data.type === 'partial') {
                 setTranscript(data.text)
               }
+              // ✅ СТАЛО (сохраняет накопленный текст):
               else if (data.type === 'final') {
                 console.log('🎯 Получен final:', data.text.substring(0, 100))
                 finalText = data.text
-                setTranscript(data.text)
+                // Используем finalText если он есть, иначе оставляем накопленный
+                if (finalText && finalText.trim()) {
+                  setTranscript(finalText)
+                }
+                // НЕ очищаем transcript если finalText пустой!
                 setCurrentChunk(0)
                 setTotalChunks(0)
                 setChunkProgress(0)
               }
+
               else if (data.type === 'error') {
                 throw new Error(data.message)
               }

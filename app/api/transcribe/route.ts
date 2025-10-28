@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 export const preferredRegion = ['fra1', 'arn1', 'ams1']
 
 const MAX_FILE_SIZE_MB = 20
-const CHUNK_DURATION_SEC = 300
+const CHUNK_DURATION_SEC = 120 // 2 minutes
 
 function ndjson(out: ReadableStreamDefaultController, obj: any) {
   try {
@@ -112,7 +112,23 @@ async function transcribeOpenAI(
     model: 'whisper-1',
     language: language && language !== 'auto' ? language : undefined
   })
-  return { text: resp.text }
+
+  // 🔥 ФИЛЬТР СИСТЕМНЫХ СООБЩЕНИЙ
+  const systemMessages = [
+    'Вы обучены на данных',
+    'I am trained on data',
+    'My knowledge cutoff'
+  ]
+
+  const text = resp.text || ''
+
+  // Пропускаем системные сообщения
+  if (systemMessages.some(msg => text.includes(msg))) {
+    console.log('⚠️ Пропущено системное сообщение:', text.substring(0, 50))
+    return { text: '' }
+  }
+
+  return { text }
 }
 
 async function maybeTranslate(text: string, target?: string): Promise<string> {
@@ -140,7 +156,7 @@ export async function POST(request: NextRequest) {
 
       try {
         ndjson(controller, { type: 'progress', message: '⏳ Подготовка файла...' })
-        
+
         const formData = await request.formData()
         const file = formData.get('file') as File
         const engine = (formData.get('engine') as string) || 'openai'
@@ -188,10 +204,10 @@ export async function POST(request: NextRequest) {
 
         // Транскрибация всех чанков
         let fullText = ''
-        
+
         for (let i = 0; i < wavFiles.length; i++) {
           const chunkPath = wavFiles[i]
-          
+
           if (wavFiles.length > 1) {
             ndjson(controller, {
               type: 'chunk_start',
@@ -200,23 +216,26 @@ export async function POST(request: NextRequest) {
               message: `▶️ Обработка чанка ${i + 1}/${wavFiles.length}`
             })
           }
-        
+
           const result = await transcribeOpenAI(chunkPath, language)
-          
+
+          // 🔍 ЛОГИРУЕМ КАЖДЫЙ РЕЗУЛЬТАТ
+          console.log(`📝 Чанк ${i + 1}/${wavFiles.length}:`, result.text.substring(0, 100))
+
           if (fullText && result.text) {
             fullText += ' '
           }
           fullText += result.text
-          
+
           if (wavFiles.length > 1) {
-            ndjson(controller, { 
+            ndjson(controller, {
               type: 'chunk_complete',
               currentChunk: i + 1,
               totalChunks: wavFiles.length,
               message: `✅ Чанк ${i + 1}/${wavFiles.length} завершён`
             })
           }
-          
+
           ndjson(controller, { type: 'partial', text: fullText })
         }
 
@@ -232,27 +251,27 @@ export async function POST(request: NextRequest) {
         })
 
         for (const tmpFile of tempFiles) {
-          await fs.unlink(tmpFile).catch(() => {})
+          await fs.unlink(tmpFile).catch(() => { })
         }
-        
+
         if (needsChunking && wavFiles.length > 0) {
           const chunkDir = path.dirname(wavFiles[0])
-          await fs.rm(chunkDir, { recursive: true, force: true }).catch(() => {})
+          await fs.rm(chunkDir, { recursive: true, force: true }).catch(() => { })
         }
 
         controller.close()
       } catch (error: any) {
         console.error('Transcription error:', error)
-        
+
         ndjson(controller, {
           type: 'error',
           message: error.message || 'Processing failed'
         })
-        
+
         for (const tmpFile of tempFiles) {
-          await fs.unlink(tmpFile).catch(() => {})
+          await fs.unlink(tmpFile).catch(() => { })
         }
-        
+
         controller.close()
       }
     }
