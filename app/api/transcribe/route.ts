@@ -1,13 +1,51 @@
 // ==========================================
-// FILE: app/api/transcribe/route.ts (WITH CHUNKING)
+// FILE: app/api/transcribe/route.ts (WITH COMPRESSION & CHUNKING)
 // ==========================================
 import { NextRequest } from 'next/server'
 import { tmpdir } from 'os'
-import { promises as fs } from 'fs'
+import { promises as fs, statSync } from 'fs'  // ✅ Добавлен statSync
 import { createReadStream } from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
+import { spawn } from 'child_process'  // ✅ Один импорт
 import OpenAI from 'openai'
+
+// ✅ Функция сжатия аудио
+async function compressAudio(
+  inputPath: string,
+  outputPath: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn('ffmpeg', [
+      '-i', inputPath,
+      '-ac', '1',           // моно (1 канал)
+      '-ar', '16000',       // 16 kHz частота
+      '-b:a', '64k',        // 64 kbps битрейт
+      '-f', 'wav',          // формат WAV
+      '-y',                 // перезаписать если существует
+      outputPath
+    ])
+
+    let stderr = ''
+
+    ffmpeg.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
+    ffmpeg.on('close', (code) => {
+      if (code === 0) {
+        console.log('✅ Аудио сжато успешно')
+        resolve()
+      } else {
+        console.error('❌ Ошибка сжатия:', stderr)
+        reject(new Error(`FFmpeg compression failed with code ${code}`))
+      }
+    })
+
+    ffmpeg.on('error', (error) => {
+      reject(error)
+    })
+  })
+}
 
 export const runtime = 'nodejs'
 export const preferredRegion = ['fra1', 'arn1', 'ams1']
@@ -106,7 +144,11 @@ async function transcribeOpenAI(
   wavPath: string,
   language?: string
 ): Promise<{ text: string }> {
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  const client = new OpenAI({ 
+    apiKey: process.env.OPENAI_API_KEY,
+    timeout: 180000  // 3 минуты таймаут
+  })
+  
   const resp = await client.audio.transcriptions.create({
     file: createReadStream(wavPath) as any,
     model: 'whisper-1',
@@ -117,7 +159,8 @@ async function transcribeOpenAI(
   const systemMessages = [
     'Вы обучены на данных',
     'I am trained on data',
-    'My knowledge cutoff'
+    'My knowledge cutoff',
+    'I\'m trained on data'
   ]
 
   const text = resp.text || ''
@@ -125,6 +168,12 @@ async function transcribeOpenAI(
   // Пропускаем системные сообщения
   if (systemMessages.some(msg => text.includes(msg))) {
     console.log('⚠️ Пропущено системное сообщение:', text.substring(0, 50))
+    return { text: '' }
+  }
+
+  // Пропускаем слишком короткие результаты
+  if (text.trim().length < 10) {
+    console.log('⚠️ Слишком короткий результат, пропускаем')
     return { text: '' }
   }
 
@@ -177,20 +226,54 @@ export async function POST(request: NextRequest) {
         const wavPath = await ffmpegToWav(inputPath)
         tempFiles.push(wavPath)
 
-        const duration = await getAudioDuration(wavPath)
-        const needsChunking = fileSizeMB > 15 || duration > 300
+        // 🔥 ПРОВЕРЯЕМ РАЗМЕР WAV ФАЙЛА
+        const wavStats = statSync(wavPath)
+        const wavSizeMB = wavStats.size / (1024 * 1024)
+        
+        console.log(`📦 Размер WAV: ${wavSizeMB.toFixed(2)} MB`)
+
+        // ✅ ЕСЛИ ФАЙЛ БОЛЬШЕ 25 MB - СЖИМАЕМ!
+        let processedWavPath = wavPath
+
+        if (wavSizeMB > 25) {
+          ndjson(controller, { 
+            type: 'progress', 
+            message: `🗜️ Сжатие файла (${wavSizeMB.toFixed(0)} MB → ~${(wavSizeMB / 5).toFixed(0)} MB)...` 
+          })
+          
+          const compressedPath = path.join(tmpdir(), `compressed-${Date.now()}.wav`)
+          tempFiles.push(compressedPath)
+          
+          await compressAudio(wavPath, compressedPath)
+          
+          const compressedStats = statSync(compressedPath)
+          const compressedSizeMB = compressedStats.size / (1024 * 1024)
+          
+          console.log(`✅ Сжато: ${wavSizeMB.toFixed(2)} MB → ${compressedSizeMB.toFixed(2)} MB`)
+          
+          ndjson(controller, { 
+            type: 'progress', 
+            message: `✅ Файл сжат: ${compressedSizeMB.toFixed(1)} MB` 
+          })
+          
+          processedWavPath = compressedPath
+        }
+
+        const duration = await getAudioDuration(processedWavPath)
+        const needsChunking = duration > 150  // 2.5 минуты
 
         let wavFiles: string[] = []
 
         if (needsChunking) {
+          const estimatedChunks = Math.ceil(duration / CHUNK_DURATION_SEC)
           ndjson(controller, {
             type: 'progress',
-            message: `📦 Разделение на части (файл ${fileSizeMB.toFixed(1)} MB, ${Math.floor(duration / 60)} минут)...`
+            message: `📦 Разделение на ${estimatedChunks} частей (${Math.floor(duration / 60)} минут)...`
           })
-          wavFiles = await splitAudioToChunks(wavPath, CHUNK_DURATION_SEC)
+          wavFiles = await splitAudioToChunks(processedWavPath, CHUNK_DURATION_SEC)
           tempFiles.push(...wavFiles)
         } else {
-          wavFiles = [wavPath]
+          wavFiles = [processedWavPath]
         }
 
         if (wavFiles.length > 1) {
@@ -217,26 +300,47 @@ export async function POST(request: NextRequest) {
             })
           }
 
-          const result = await transcribeOpenAI(chunkPath, language)
+          try {
+            const result = await transcribeOpenAI(chunkPath, language)
 
-          // 🔍 ЛОГИРУЕМ КАЖДЫЙ РЕЗУЛЬТАТ
-          console.log(`📝 Чанк ${i + 1}/${wavFiles.length}:`, result.text.substring(0, 100))
-
-          if (fullText && result.text) {
-            fullText += ' '
-          }
-          fullText += result.text
-
-          if (wavFiles.length > 1) {
-            ndjson(controller, {
-              type: 'chunk_complete',
-              currentChunk: i + 1,
-              totalChunks: wavFiles.length,
-              message: `✅ Чанк ${i + 1}/${wavFiles.length} завершён`
+            // 🔍 ЛОГИРУЕМ КАЖДЫЙ РЕЗУЛЬТАТ
+            console.log(`📝 Чанк ${i + 1}/${wavFiles.length}:`, {
+              length: result.text.length,
+              preview: result.text.substring(0, 100)
             })
-          }
 
-          ndjson(controller, { type: 'partial', text: fullText })
+            // Добавляем текст только если он не пустой
+            if (result.text && result.text.trim().length > 0) {
+              if (fullText && result.text) {
+                fullText += ' '
+              }
+              fullText += result.text
+            }
+
+            if (wavFiles.length > 1) {
+              ndjson(controller, {
+                type: 'chunk_complete',
+                currentChunk: i + 1,
+                totalChunks: wavFiles.length,
+                message: `✅ Чанк ${i + 1}/${wavFiles.length} завершён`
+              })
+            }
+
+            // Отправляем накопленный текст
+            ndjson(controller, { type: 'partial', text: fullText })
+
+          } catch (error: any) {
+            console.error(`❌ Ошибка в чанке ${i + 1}:`, error.message)
+            
+            // Уведомляем о проблеме, но продолжаем
+            ndjson(controller, {
+              type: 'progress',
+              message: `⚠️ Чанк ${i + 1} пропущен (ошибка)`
+            })
+            
+            // Продолжаем со следующим чанком
+            continue
+          }
         }
 
         if (translateTo) {
@@ -244,12 +348,17 @@ export async function POST(request: NextRequest) {
           fullText = await maybeTranslate(fullText, translateTo)
         }
 
-        ndjson(controller, { type: 'final', text: fullText })
+        // ✅ ОТПРАВЛЯЕМ ФИНАЛЬНЫЙ ТЕКСТ (только если он не пустой)
+        if (fullText && fullText.trim().length > 0) {
+          ndjson(controller, { type: 'final', text: fullText })
+        }
+
         ndjson(controller, {
           type: 'progress',
           message: `✅ Готово! (${formatElapsedTime(Date.now() - startTime)})`
         })
 
+        // Очистка временных файлов
         for (const tmpFile of tempFiles) {
           await fs.unlink(tmpFile).catch(() => { })
         }
