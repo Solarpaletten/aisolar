@@ -1,7 +1,7 @@
 'use client'
 
-import AISolarTranscriber from '@/components/AISolarTranscriber'
+import AISolarTabs from '@/components/AISolarTabs'
 
-export default function Page() {
-  return <AISolarTranscriber />
+export default function Home() {
+  return <AISolarTabs />
 }
